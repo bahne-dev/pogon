@@ -21,6 +21,9 @@ public class General
 
             foreach (XYZ neighXYZ in getNeighbors(currXYZ))
             {
+                // TODO: verify if this creates unrecoverable state
+                if (occupied.Count >= limit) break;
+
                 Pos neighPos = toPos(neighXYZ);
 
                 if (occupied.ContainsKey(neighXYZ)) continue;
