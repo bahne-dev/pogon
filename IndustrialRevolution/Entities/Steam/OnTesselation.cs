@@ -7,6 +7,7 @@ using System;
 
 namespace IndustrialRevolution.Entities.Steam;
 
+// TODO: replace entityagent with entity (no npc ai needed)
 internal partial class EntitySteam : EntityAgent
 {
     // TODO: only draw edge voxels, somehow, maybe through toCheck or something
