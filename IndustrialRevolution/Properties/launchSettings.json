@@ -3,7 +3,7 @@
     "Client Direct": {
       "commandName": "Executable",
       "executablePath": "$(VINTAGE_STORY)/Vintagestory",
-      "commandLineArgs": "--tracelog --addModPath \"$(ProjectDir)/bin/Debug\"",
+      "commandLineArgs": "--tracelog -oTestWorld2 -pcreativebuilding --addModPath \"$(ProjectDir)/bin/Debug\"",
       "workingDirectory": "$(VINTAGE_STORY)",
       "hotReloadEnabled": true
     }
