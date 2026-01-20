@@ -1,0 +1,44 @@
+{
+	"editor": {
+		"allAngles": false,
+		"entityTextureMode": false
+	},
+	"textureWidth": 16,
+	"textureHeight": 16,
+	"textureSizes": {
+	},
+	"textures": {
+        "goo": "item/green-goo"
+	},
+	"elements": [
+		{
+			"name": "body",
+			"from": [ 8.0, 0.0, 8.0 ],
+			"to": [ 11.0, 6.0, 11.0 ],
+			"rotationOrigin": [ 8.0, 0.0, 8.0 ],
+			"faces": {
+				"north": { "texture": "#goo", "uv": [ 0.0, 0.0, 3.0, 6.0 ] },
+				"east": { "texture": "#goo", "uv": [ 0.0, 0.0, 3.0, 6.0 ] },
+				"south": { "texture": "#goo", "uv": [ 0.0, 0.0, 3.0, 6.0 ] },
+				"west": { "texture": "#goo", "uv": [ 0.0, 0.0, 3.0, 6.0 ] },
+				"up": { "texture": "#goo", "uv": [ 0.0, 0.0, 3.0, 3.0 ] },
+				"down": { "texture": "#goo", "uv": [ 0.0, 0.0, 3.0, 3.0 ] }
+			},
+			"children": [
+				{
+					"name": "nozzle",
+					"from": [ 1.0, 6.0, 1.0 ],
+					"to": [ 2.0, 8.0, 2.0 ],
+					"rotationOrigin": [ 1.0, 6.0, 1.0 ],
+					"faces": {
+						"north": { "texture": "#goo", "uv": [ 0.0, 0.0, 1.0, 2.0 ] },
+						"east": { "texture": "#goo", "uv": [ 0.0, 0.0, 1.0, 2.0 ] },
+						"south": { "texture": "#goo", "uv": [ 0.0, 0.0, 1.0, 2.0 ] },
+						"west": { "texture": "#goo", "uv": [ 0.0, 0.0, 1.0, 2.0 ] },
+						"up": { "texture": "#goo", "uv": [ 0.0, 0.0, 1.0, 1.0 ] },
+						"down": { "texture": "#goo", "uv": [ 0.0, 0.0, 1.0, 1.0 ] }
+					}
+				}
+			]
+		}
+	]}
