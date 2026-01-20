@@ -37,7 +37,10 @@ public class IndustrialRevolutionModSystem : ModSystem
 
     private void RegisterComplexBlocks(ICoreAPI api)
     {
-        api.RegisterBlockClass(Mod.Info.ModID + "." + "blockboiler", typeof(BlockBoiler));
+        api.RegisterBlockClass(
+            Mod.Info.ModID + "."
+            + "blockboiler", typeof(BlockBoiler)
+        );
     }
 
     private void RegisterComplexEntities(ICoreAPI api)
