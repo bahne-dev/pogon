@@ -6,10 +6,10 @@ namespace IndustrialRevolution.Entities.Mechanism;
 
 public class MechanismRenderer : EntityRenderer
 {
-    private EntityMechanism entity;
-    private ICoreClientAPI capi;
-    private MeshRef[] blockMeshes;  // GPU mesh handles
-    private Vec3f[] blockOffsets;   // relative positions
+    private new EntityMechanism? entity;
+    private new ICoreClientAPI? capi;
+    private MeshRef[]? blockMeshes;  // GPU mesh handles
+    private Vec3f[]? blockOffsets;   // relative positions
 
     public double RenderOrder => 0.5;
     public int RenderRange => 999;
@@ -25,18 +25,20 @@ public class MechanismRenderer : EntityRenderer
     {
         base.OnEntityLoaded();
 
-        EntityMechanism mechanism = entity as EntityMechanism;
-        blockMeshes = mechanism.GetBlockMeshes();
-        blockOffsets = mechanism.GetBlockOffsets();
+        if (entity != null)
+        {
+            blockMeshes = entity.GetBlockMeshes();
+            blockOffsets = entity.GetBlockOffsets();
 
-        capi.Logger.Notification(
-            $"Renderer loaded with {blockMeshes?.Length ?? 0} meshes"
-        );
+            capi?.Logger.Notification(
+                $"Renderer loaded with {blockMeshes?.Length ?? 0} meshes"
+            );
+        }
     }
 
     public override void DoRender3DOpaque(float dt, bool isShadowPass)
     {
-        if (blockMeshes == null) return;
+        if (blockMeshes == null || capi == null || entity == null) return;
 
         IRenderAPI rapi = capi.Render;
         Vec3d camPos = capi.World.Player.Entity.CameraPos;
@@ -51,7 +53,7 @@ public class MechanismRenderer : EntityRenderer
 
         for (int i = 0; i < blockMeshes.Length; i++)
         {
-            if (blockMeshes[i] == null) continue;
+            if (blockMeshes[i] == null || blockOffsets == null) continue;
 
             float entityX = (float)(entity.Pos.X - camPos.X);
             float entityY = (float)(entity.Pos.Y - camPos.Y);
