@@ -43,4 +43,26 @@ public class General
             }
         }
     }
+
+    public static (float pitch, float yaw, float roll) QuaternionToEuler(System.Numerics.Quaternion q)
+    {
+        float roll_x = MathF.Atan2(
+            2.0f * (q.W * q.X + q.Y * q.Z),
+            1.0f - 2.0f * (q.X * q.X + q.Y * q.Y)
+        );
+
+        float sinp = 2.0f * (q.W * q.Y - q.Z * q.X);
+        float pitch_y;
+        if (MathF.Abs(sinp) >= 1)
+            pitch_y = MathF.CopySign(MathF.PI / 2, sinp);
+        else
+            pitch_y = MathF.Asin(sinp);
+
+        float yaw_z = MathF.Atan2(
+            2.0f * (q.W * q.Z + q.X * q.Y),
+            1.0f - 2.0f * (q.Y * q.Y + q.Z * q.Z)
+        );
+
+        return (pitch_y, yaw_z, roll_x);
+    }
 }
