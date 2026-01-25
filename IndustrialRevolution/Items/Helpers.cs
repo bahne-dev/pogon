@@ -79,6 +79,10 @@ public partial class ItemConstructionGlue : Item
         List<StoredBlock> blocks = new List<StoredBlock>();
         IBlockAccessor ba = api.World.BlockAccessor;
 
+        float width = max.X - min.X + 1;
+        float height = max.Y - min.Y + 1;
+        float length = max.Z - min.Z + 1;
+
         for (int x = min.X; x <= max.X; x++)
         {
             for (int y = min.Y; y <= max.Y; y++)
@@ -98,12 +102,23 @@ public partial class ItemConstructionGlue : Item
                         be.ToTreeAttributes(beData);
                     }
 
+                    float corrX = x - min.X - (width / 2);
+                    float corrZ = z - min.Z - (length / 2);
+
+                    // y is not translated towards center because
+                    // an entity's position's Y, is the block its standing on,
+                    // rather than 0.5 blocks up in the air
+                    //
+                    // NOTE: i dont know how this doesnt mess with the physics
+                    // body construction/rendering
+                    float corrY = y - min.Y;
+
                     blocks.Add(new StoredBlock
                     {
                         Code = block.Code.ToShortString(),
-                        RelX = x - min.X,
-                        RelY = y - min.Y,
-                        RelZ = z - min.Z,
+                        RelX = corrX,
+                        RelY = corrY,
+                        RelZ = corrZ,
                         BlockEntityAttributes = beData
                     });
 
@@ -120,7 +135,7 @@ public partial class ItemConstructionGlue : Item
             return;
         }
 
-        SpawnMechanismEntity(min.ToVec3d().Add(0.5, 0, 0.5), blocks);
+        SpawnMechanismEntity(min.ToVec3d(), max.ToVec3d(), blocks);
 
         player.Entity.RightHandItemSlot?.Itemstack?.Collectible.DamageItem(
             api.World, player.Entity, player.Entity.RightHandItemSlot, 1);
@@ -131,7 +146,9 @@ public partial class ItemConstructionGlue : Item
         );
     }
 
-    private void SpawnMechanismEntity(Vec3d pos, List<StoredBlock> blocks)
+    private void SpawnMechanismEntity(
+        Vec3d min, Vec3d max, List<StoredBlock> blocks
+    )
     {
         EntityProperties? type = api.World.GetEntityType(
             new AssetLocation("industrialrevolution:mechanism")
@@ -143,7 +160,14 @@ public partial class ItemConstructionGlue : Item
         }
 
         Entity entity = api.World.ClassRegistry.CreateEntity(type);
-        entity.ServerPos.SetPos(pos);
+
+        var width = max.X - min.X + 1;
+        var height = max.Y - min.Y + 1;
+        var length = max.Z - min.Z + 1;
+
+        var centerPos = min.Add(width / 2, 0, length / 2);
+
+        entity.ServerPos.SetPos(centerPos);
         entity.Pos.SetFrom(entity.ServerPos);
 
         // build data tree to pass to entity
@@ -153,9 +177,9 @@ public partial class ItemConstructionGlue : Item
         {
             ITreeAttribute blockTree = new TreeAttribute();
             blockTree.SetString("code", blocks[i].Code);
-            blockTree.SetInt("x", blocks[i].RelX);
-            blockTree.SetInt("y", blocks[i].RelY);
-            blockTree.SetInt("z", blocks[i].RelZ);
+            blockTree.SetFloat("x", blocks[i].RelX);
+            blockTree.SetFloat("y", blocks[i].RelY);
+            blockTree.SetFloat("z", blocks[i].RelZ);
 
             if (blocks[i].BlockEntityAttributes != null)
             {
@@ -188,6 +212,10 @@ public partial class ItemConstructionGlue : Item
 public class StoredBlock
 {
     public string? Code;
-    public int RelX, RelY, RelZ;
+
+    // NOTE: X and Z are relative to the center of the whole entity,
+    // but Y has to be relative to the center of the bottom of the entity
+    public float RelX, RelY, RelZ;
+
     public ITreeAttribute? BlockEntityAttributes;
 }
