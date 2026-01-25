@@ -5,16 +5,29 @@
     <OutputPath>bin/$(Configuration)/IndustrialRevolution/</OutputPath>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
   <ItemGroup>
     <Reference Include="VintagestoryAPI">
       <HintPath>$(VINTAGE_STORY)/VintagestoryAPI.dll</HintPath>
       <Private>false</Private>
     </Reference>
+
     <Reference Include="VSSurvivalMod">
       <HintPath>$(VINTAGE_STORY)/Mods/VSSurvivalMod.dll</HintPath>
       <Private>false</Private>
     </Reference>
+
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <Reference Include="protobuf-net">
+      <HintPath>$(VINTAGE_STORY)/Lib/protobuf-net.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
+
   <ItemGroup>
     <Content Include="modinfo.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -32,9 +45,23 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>$(VINTAGE_STORY)/Lib/Newtonsoft.Json.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="BepuPhysics" Version="2.5.0-beta.27" />
+    <PackageReference Include="BepuUtilities" Version="2.5.0-beta.27" />
+  </ItemGroup>
+
+<Target Name="CopyBepuDLLs" AfterTargets="Build">
+  <PropertyGroup>
+    <BepuPath Condition="'$(NuGetPackageRoot)' == ''">/home/bane/.nuget/packages</BepuPath>
+    <BepuPath Condition="'$(NuGetPackageRoot)' != ''">$(NuGetPackageRoot)</BepuPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <BepuFiles Include="$(BepuPath)/bepuphysics/2.5.0-beta.27/lib/net8.0/*.dll" />
+    <BepuUtilFiles Include="$(BepuPath)/bepuutilities/2.5.0-beta.27/lib/net8.0/*.dll" />
+  </ItemGroup>
+  <Copy SourceFiles="@(BepuFiles)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+  <Copy SourceFiles="@(BepuUtilFiles)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+</Target>
+
 </Project>
