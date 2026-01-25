@@ -134,7 +134,10 @@ public partial class EntityMechanism : Entity
         // RotationX += 0.01f;
         // RotationZ += 0.005f;
 
-        // TODO: add physics shit here later
+        if (Api.Side == EnumAppSide.Server && physicsInitialized)
+        {
+            UpdatePhysics(dt);
+        }
     }
 
     private void GenerateMeshes()
