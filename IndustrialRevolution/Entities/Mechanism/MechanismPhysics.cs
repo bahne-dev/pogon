@@ -18,6 +18,8 @@ public partial class EntityMechanism
     private List<StaticHandle> nearbyStaticHandles = new List<StaticHandle>();
     private bool physicsInitialized = false;
 
+    // TODO: change all tuples to vec3's maybe? maybe it becomes faster cuz
+    // SIMD or whatever
     private HashSet<(int x, int y, int z)> visitedCoords =
         new HashSet<(int x, int y, int z)>();
 
