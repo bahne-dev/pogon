@@ -20,14 +20,6 @@
     "behaviors": []
   },
   "server": {
-    "behaviors": [
-      {
-        "code": "passivephysics",
-        "properties": {
-          "groundDragFactor": 0.3,
-          "airDragFactor": 0.99
-        }
-      }
-    ]
+    "behaviors": []
   }
 }

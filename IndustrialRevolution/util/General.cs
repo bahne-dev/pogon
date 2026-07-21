@@ -46,23 +46,47 @@ public class General
 
     public static (float pitch, float yaw, float roll) QuaternionToEuler(System.Numerics.Quaternion q)
     {
-        float roll_x = MathF.Atan2(
-            2.0f * (q.W * q.X + q.Y * q.Z),
+        // X->Y->Z rotation order to match renderer
+        float sinPitch = 2.0f * (q.W * q.X - q.Y * q.Z);
+        float pitch;
+        if (MathF.Abs(sinPitch) >= 1)
+            pitch = MathF.CopySign(MathF.PI / 2, sinPitch);
+        else
+            pitch = MathF.Asin(sinPitch);
+
+        float yaw = MathF.Atan2(
+            2.0f * (q.W * q.Y + q.X * q.Z),
             1.0f - 2.0f * (q.X * q.X + q.Y * q.Y)
         );
 
-        float sinp = 2.0f * (q.W * q.Y - q.Z * q.X);
-        float pitch_y;
-        if (MathF.Abs(sinp) >= 1)
-            pitch_y = MathF.CopySign(MathF.PI / 2, sinp);
-        else
-            pitch_y = MathF.Asin(sinp);
-
-        float yaw_z = MathF.Atan2(
+        float roll = MathF.Atan2(
             2.0f * (q.W * q.Z + q.X * q.Y),
-            1.0f - 2.0f * (q.Y * q.Y + q.Z * q.Z)
+            1.0f - 2.0f * (q.X * q.X + q.Z * q.Z)
         );
 
-        return (pitch_y, yaw_z, roll_x);
+        return (pitch, yaw, roll);
+    }
+
+    public static System.Numerics.Quaternion EulerToQuaternion(float pitch, float yaw, float roll)
+    {
+        // X->Y->Z rotation order to match renderer
+        float halfPitch = pitch * 0.5f;
+        float halfYaw = yaw * 0.5f;
+        float halfRoll = roll * 0.5f;
+
+        float cosHalfPitch = MathF.Cos(halfPitch);
+        float sinHalfPitch = MathF.Sin(halfPitch);
+        float cosHalfYaw = MathF.Cos(halfYaw);
+        float sinHalfYaw = MathF.Sin(halfYaw);
+        float cosHalfRoll = MathF.Cos(halfRoll);
+        float sinHalfRoll = MathF.Sin(halfRoll);
+
+        // Quaternion multiplication for X->Y->Z rotation order
+        float x = sinHalfPitch * cosHalfYaw * cosHalfRoll + cosHalfPitch * sinHalfYaw * sinHalfRoll;
+        float y = cosHalfPitch * sinHalfYaw * cosHalfRoll - sinHalfPitch * cosHalfYaw * sinHalfRoll;
+        float z = cosHalfPitch * cosHalfYaw * sinHalfRoll - sinHalfPitch * sinHalfYaw * cosHalfRoll;
+        float w = cosHalfPitch * cosHalfYaw * cosHalfRoll + sinHalfPitch * sinHalfYaw * sinHalfRoll;
+
+        return new System.Numerics.Quaternion(x, y, z, w);
     }
 }

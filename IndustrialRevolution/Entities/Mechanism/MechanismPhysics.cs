@@ -25,6 +25,21 @@ public partial class EntityMechanism
 
     private PhysicsSimulation? clientSim;
 
+    public Vector3 centerOfMass
+    {
+        get => new Vector3(
+            WatchedAttributes.GetFloat("x", 0f),
+            WatchedAttributes.GetFloat("y", 0f),
+            WatchedAttributes.GetFloat("z", 0f)
+        );
+        set
+        {
+            WatchedAttributes.SetFloat("x", value.X);
+            WatchedAttributes.SetFloat("y", value.Y);
+            WatchedAttributes.SetFloat("z", value.Z);
+        }
+    }
+
     private void InitializePhysics(PhysicsSimulation sharedSimulation)
     {
         if (physicsInitialized) return;
@@ -79,6 +94,10 @@ public partial class EntityMechanism
             out var centerOfMass
         );
 
+        log?.Debug($"com: {this.centerOfMass}");
+        this.centerOfMass = centerOfMass;
+        log?.Debug($"com: {this.centerOfMass}");
+
         inertia = bodyInertia;
 
         builder.Dispose();
@@ -101,7 +120,8 @@ public partial class EntityMechanism
             pose,
             inertia,
             new CollidableDescription(shapeIndex, 0.1f),
-            new BodyActivityDescription(0.001f)
+            // new BodyActivityDescription(0.001f)
+            new BodyActivityDescription(sleepThreshold: -1)
         );
 
         this.physicsBodyHandle = simulation.Bodies.Add(bodyDescription);
@@ -137,7 +157,7 @@ public partial class EntityMechanism
 
         int range = (int)Math.Ceiling(
             Math.Max(shape.Width, Math.Max(shape.Height, shape.Length))
-        );
+        ) + 1;
 
         BlockPos minPos = new BlockPos(
             pos.x - range,
@@ -188,24 +208,32 @@ public partial class EntityMechanism
 
         this.DetectAndAddNearbyBlocks();
 
-        // var simulation = physicsSimulation.Simulation;
-        // var bodyRef = simulation.Bodies.GetBodyReference(physicsBodyHandle);
-        // var pose = bodyRef.Pose;
-        // var velocity = bodyRef.Velocity;
-        // var angularVel = bodyRef.Velocity.Angular;
-        //
-        // // update entity position and orientation from physics
-        // Pos.X = pose.Position.X;
-        // Pos.Y = pose.Position.Y;
-        // Pos.Z = pose.Position.Z;
-        //
-        // // convert quaternion to euler angles
-        // var (pitch, yaw, roll) = QuaternionToEuler(pose.Orientation);
-        // RotationX = pitch;
-        // RotationY = yaw;
-        // RotationZ = roll;
-        //
-        // updateCounter++;
+        var simulation = physicsSimulation.Simulation;
+        var bodyRef = simulation.Bodies.GetBodyReference(physicsBodyHandle);
+        var pose = bodyRef.Pose;
+        var velocity = bodyRef.Velocity;
+        var angularVel = bodyRef.Velocity.Angular;
+
+        // update entity position and orientation from physics
+        this.ServerPos.X = pose.Position.X;
+        this.ServerPos.Y = pose.Position.Y;
+        this.ServerPos.Z = pose.Position.Z;
+
+        this.Pos.SetPos(this.ServerPos);
+
+        // convert quaternion to euler angles
+        var (pitch, yaw, roll) = util.General.QuaternionToEuler(
+            pose.Orientation
+        );
+
+        this.RotationX = pitch;
+        this.RotationY = yaw;
+        this.RotationZ = roll;
+
+        // Mark dirty to sync to clients
+        WatchedAttributes.MarkPathDirty("rotX");
+        WatchedAttributes.MarkPathDirty("rotY");
+        WatchedAttributes.MarkPathDirty("rotZ");
     }
 
     private void CleanupPhysics()

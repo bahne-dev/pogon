@@ -21,14 +21,28 @@ public partial class EntityMechanism : Entity
 
     private ModLogger? log = IndustrialRevolutionModSystem.Logger;
 
-    public float RotationX { get; set; } = 0f;
-    public float RotationY { get; set; } = 0f;
-    public float RotationZ { get; set; } = 0f;
+    public float RotationX
+    {
+        get => WatchedAttributes.GetFloat("rotX", 0f);
+        set => WatchedAttributes.SetFloat("rotX", value);
+    }
+
+    public float RotationY
+    {
+        get => WatchedAttributes.GetFloat("rotY", 0f);
+        set => WatchedAttributes.SetFloat("rotY", value);
+    }
+
+    public float RotationZ
+    {
+        get => WatchedAttributes.GetFloat("rotZ", 0f);
+        set => WatchedAttributes.SetFloat("rotZ", value);
+    }
 
     // NOTE: "true" as in represenets the dimensions of the rendered selection
     // as opposed to being the width = length dimensions of the bounding box
     private float trueWidth;
-    private float trueHeight;
+    public float trueHeight;
     private float trueLength;
 
     private IndustrialRevolutionModSystem? modSystem;
@@ -63,7 +77,7 @@ public partial class EntityMechanism : Entity
         var max = Math.Max(sizeX, Math.Max(sizeY, sizeZ));
 
         SetSelectionBox(max, max);
-        SetCollisionBox(max, max);
+        // collisions will be handled by phys engine
     }
 
     public override void Initialize(EntityProperties properties, ICoreAPI api, long InChunkIndex3d)

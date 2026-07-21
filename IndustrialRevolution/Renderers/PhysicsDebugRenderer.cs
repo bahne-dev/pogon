@@ -101,6 +101,8 @@ public class PhysicsDebugRenderer : IRenderer
                 body.RotX, body.RotY, body.RotZ, body.RotW
             );
 
+            var (pitch, yaw, roll) = util.General.QuaternionToEuler(parentQuat);
+
             foreach (var child in body.Children)
             {
                 var localPos = new System.Numerics.Vector3(
@@ -108,18 +110,16 @@ public class PhysicsDebugRenderer : IRenderer
                 );
                 var rotatedPos = System.Numerics.Vector3.Transform(localPos, parentQuat);
 
+                // World position = body center + rotated offset
                 float worldX = body.PosX + rotatedPos.X;
                 float worldY = body.PosY + rotatedPos.Y;
                 float worldZ = body.PosZ + rotatedPos.Z;
 
-                // camera-relative
                 float x = (float)(worldX - camPos.X);
                 float y = (float)(worldY - camPos.Y);
                 float z = (float)(worldZ - camPos.Z);
 
-                // TODO: something isnt right here
-                var (pitch, yaw, roll) = util.General.QuaternionToEuler(parentQuat);
-
+                // All children use the SAME rotation as parent
                 prog.ModelMatrix = new Matrixf()
                     .Translate(x, y, z)
                     .RotateX(pitch)

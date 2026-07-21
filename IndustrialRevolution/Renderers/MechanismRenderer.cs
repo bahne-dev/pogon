@@ -2,6 +2,8 @@ using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Client;
 using Vintagestory.API.MathTools;
 
+using System.Numerics;
+
 using IndustrialRevolution.Entities.Mechanism;
 
 namespace IndustrialRevolution.Renderers;
@@ -38,6 +40,8 @@ public class MechanismRenderer : EntityRenderer
         }
     }
 
+    private int joecount = 0;
+
     public override void DoRender3DOpaque(float dt, bool isShadowPass)
     {
         if (blockMeshes == null || capi == null || entity == null) return;
@@ -53,13 +57,28 @@ public class MechanismRenderer : EntityRenderer
         prog.Use();
         prog.Tex2D = capi.BlockTextureAtlas.AtlasTextures[0].TextureId;
 
-        for (int i = 0; i < blockMeshes.Length; i++)
+        for (int i = 0; i < this.blockMeshes.Length; i++)
         {
             if (blockMeshes[i] == null || blockOffsets == null) continue;
+
+            if (joecount < 10) {
+                IndustrialRevolutionModSystem.Logger.Debug(
+                    $"pos @ rend: ({entity.Pos.X} {entity.Pos.Y} {entity.Pos.Z})"
+                );
+                joecount++;
+            }
 
             float entityX = (float)(entity.Pos.X - camPos.X);
             float entityY = (float)(entity.Pos.Y - camPos.Y);
             float entityZ = (float)(entity.Pos.Z - camPos.Z);
+
+            float comX = this.entity.centerOfMass.X;
+            float comY = this.entity.centerOfMass.Y;
+            float comZ = this.entity.centerOfMass.Z;
+
+            if (this.entity.centerOfMass.X == 0) {
+                IndustrialRevolutionModSystem.Logger.Debug("broo...");
+            }
 
             prog.ModelMatrix = new Matrixf()
                 .Translate(entityX, entityY, entityZ)
@@ -67,9 +86,9 @@ public class MechanismRenderer : EntityRenderer
                 .RotateY(entity.RotationY)
                 .RotateZ(entity.RotationZ)
                 .Translate(
-                    blockOffsets[i].X,
-                    blockOffsets[i].Y,
-                    blockOffsets[i].Z
+                    blockOffsets[i].X - comX,
+                    blockOffsets[i].Y - comY,
+                    blockOffsets[i].Z - comZ
                 )
                 .Values;
 
