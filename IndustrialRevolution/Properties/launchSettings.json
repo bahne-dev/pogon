@@ -2,7 +2,7 @@
   "profiles": {
     "Client Direct": {
       "commandName": "Executable",
-      "executablePath": "$(VINTAGE_STORY)/Vintagestory",
+      "executablePath": "$(VINTAGE_STORY_BIN)",
       "commandLineArgs": "--tracelog -oTestWorld2 -pcreativebuilding --addModPath \"$(ProjectDir)/bin/Debug\"",
       "workingDirectory": "$(VINTAGE_STORY)",
       "hotReloadEnabled": true

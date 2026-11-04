@@ -23,14 +23,11 @@
                 pkg:
                 builtins.elem (nixpkgs.lib.getName pkg) [
                   "rider"
+                  "vintagestory"
                 ];
             };
           }
         );
-
-      # Import local config with fallback
-      localConfig =
-        if builtins.pathExists ./local.nix then import ./local.nix else { vintageStoryPath = ""; };
     in
     {
       devShells = forEachSupportedSystem (
@@ -47,6 +44,8 @@
 
               jetbrains.rider
 
+              vintagestory
+
               # for prototyping
               python3
               inotify-tools
@@ -62,22 +61,31 @@
               pkgs.zlib
             ]}";
 
+            VINTAGE_STORY = "${pkgs.vintagestory}/share/vintagestory";
+            VINTAGE_STORY_BIN = "${pkgs.vintagestory}/bin/vintagestory";
+
+
             shellHook = ''
-              # Source .env if it exists
               if [ -f .env ]; then
                 source .env
               fi
 
-              if [ -z "$VINTAGE_STORY" ]; then
-                echo " WARNING: VINTAGE_STORY not set!"
-                echo "Create a .env file with:"
-                echo "  export VINTAGE_STORY=/path/to/VintageStory/installation"
+              if [ -z "$NuGetPackageRoot" ]; then
+                echo "WARNING: NuGetPackageRoot not set!"
+                echo "The Bepu physics DLLs may not be found, and the mod may fail to load."
+                echo "Add this to .env:"
+                echo '  export NuGetPackageRoot="$HOME/.nuget/packages/"'
               fi
 
               alias bld="./build.sh"
               alias dbg="./debug.sh"
               alias wt="./watch.sh"
               alias prt="source ./venv/bin/activate && pip install -r requirements.txt"
+
+              echo bld="./build.sh"
+              echo dbg="./debug.sh"
+              echo wt="./watch.sh"
+              echo prt="source ./venv/bin/activate && pip install -r requirements.txt"
             '';
           };
         }
