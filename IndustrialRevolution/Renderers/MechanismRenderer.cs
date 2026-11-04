@@ -45,6 +45,7 @@ public class MechanismRenderer : EntityRenderer
     public override void DoRender3DOpaque(float dt, bool isShadowPass)
     {
         if (blockMeshes == null || capi == null || entity == null) return;
+        if (isShadowPass) return;
 
         IRenderAPI rapi = capi.Render;
         Vec3d camPos = capi.World.Player.Entity.CameraPos;
