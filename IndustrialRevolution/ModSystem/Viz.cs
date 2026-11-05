@@ -3,36 +3,47 @@ using Vintagestory.API.Common;
 
 namespace IndustrialRevolution;
 
+public enum VizLayer
+{
+    Game,
+    Bepu,
+    Both,
+}
+
 public partial class IndustrialRevolutionModSystem
 {
-    public bool ShowBepuBodies { get; private set; } = true;
-    public bool ShowGameMeshes { get; private set; } = true;
+    // NOTE: defaults to one layer because the two draw coplanar cubes and z-fight
+    public VizLayer ActiveViz { get; private set; } = VizLayer.Game;
 
-    // NOTE: this is a client command, so it uses the . prefix not /
+    public bool ShowBepuBodies => this.ActiveViz != VizLayer.Game;
+    public bool ShowGameMeshes => this.ActiveViz != VizLayer.Bepu;
+
+    // NOTE: client commands use the "." prefix, so this is ".viz", not "/viz"
     private void RegisterVizCommand(ICoreClientAPI capi)
     {
         var vizCmd = capi.ChatCommands.Create("viz")
-            .WithDescription("Toggle mechanism render layers");
+            .WithDescription("Choose which mechanism render layers are shown");
 
         vizCmd.BeginSubCommand("bepu")
-            .WithDescription("Toggle the physics body debug renderer")
-            .HandleWith(_ =>
-            {
-                this.ShowBepuBodies = !this.ShowBepuBodies;
-                return VizResult("bepu", this.ShowBepuBodies);
-            })
+            .WithDescription("Show only the physics body debug renderer")
+            .HandleWith(_ => SetViz(VizLayer.Bepu))
             .EndSubCommand();
 
         vizCmd.BeginSubCommand("game")
-            .WithDescription("Toggle the block mesh renderer")
-            .HandleWith(_ =>
-            {
-                this.ShowGameMeshes = !this.ShowGameMeshes;
-                return VizResult("game", this.ShowGameMeshes);
-            })
+            .WithDescription("Show only the block mesh renderer")
+            .HandleWith(_ => SetViz(VizLayer.Game))
+            .EndSubCommand();
+
+        vizCmd.BeginSubCommand("both")
+            .WithDescription("Show both layers (they z-fight)")
+            .HandleWith(_ => SetViz(VizLayer.Both))
             .EndSubCommand();
     }
 
-    private static TextCommandResult VizResult(string layer, bool enabled) =>
-        TextCommandResult.Success($"viz {layer}: {(enabled ? "on" : "off")}");
+    private TextCommandResult SetViz(VizLayer layer)
+    {
+        this.ActiveViz = layer;
+        string name = layer.ToString().ToLowerInvariant();
+        return TextCommandResult.Success($"viz: {name}");
+    }
 }
