@@ -12,6 +12,7 @@ public class MechanismRenderer : EntityRenderer
 {
     private new EntityMechanism? entity;
     private new ICoreClientAPI? capi;
+    private IndustrialRevolutionModSystem? modSystem;
     private MeshRef[]? blockMeshes;  // GPU mesh handles
     private Vec3f[]? blockOffsets;   // relative positions
 
@@ -23,6 +24,8 @@ public class MechanismRenderer : EntityRenderer
     {
         this.entity = entity as EntityMechanism;
         this.capi = api;
+        this.modSystem = api.ModLoader
+            .GetModSystem<IndustrialRevolutionModSystem>();
     }
 
     public override void OnEntityLoaded()
@@ -46,6 +49,7 @@ public class MechanismRenderer : EntityRenderer
     {
         if (blockMeshes == null || capi == null || entity == null) return;
         if (isShadowPass) return;
+        if (modSystem?.ShowGameMeshes == false) return;
 
         IRenderAPI rapi = capi.Render;
         Vec3d camPos = capi.World.Player.Entity.CameraPos;

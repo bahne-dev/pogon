@@ -62,6 +62,8 @@ public class PhysicsDebugRenderer : IRenderer
         if (capi == null || redCubeMeshRef == null || blueCubeMeshRef == null)
             return;
 
+        if (!this.system.ShowBepuBodies) return;
+
         var debugData = this.system.GetLatestDebugData();
         if (debugData == null) return;
 

@@ -36,6 +36,7 @@ public partial class IndustrialRevolutionModSystem : ModSystem
         this.capi.Event.RegisterRenderer(
             new PhysicsDebugRenderer(this, capi), EnumRenderStage.Opaque
         );
+        this.RegisterVizCommand(capi);
     }
 
     public override void StartServerSide(ICoreServerAPI sapi)
