@@ -1,165 +1,98 @@
-using System;
 using System.Collections.Generic;
+using System.Linq;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Client;
-using Vintagestory.API.Server;
 using Vintagestory.API.Datastructures;
 
 namespace IndustrialRevolution;
 
 public partial class ItemConstructionGlue : Item
 {
-    private void ProcessSelection(IPlayer player)
-    {
-        ITreeAttribute? selectionData = player
-            .Entity
-            .WatchedAttributes
-            .GetTreeAttribute(SelectionDataKey);
-
-        if (selectionData == null) return;
-
-        BlockPos start = new BlockPos(
-            selectionData.GetInt("startX"),
-            selectionData.GetInt("startY"),
-            selectionData.GetInt("startZ")
-        );
-        BlockPos end = new BlockPos(
-            selectionData.GetInt("endX"),
-            selectionData.GetInt("endY"),
-            selectionData.GetInt("endZ")
-        );
-
-        // align start and end pos to be (neg neg neg), (pos pos pos)
-        BlockPos min = new BlockPos(
-            Math.Min(start.X, end.X),
-            Math.Min(start.Y, end.Y),
-            Math.Min(start.Z, end.Z)
-        );
-        BlockPos max = new BlockPos(
-            Math.Max(start.X, end.X),
-            Math.Max(start.Y, end.Y),
-            Math.Max(start.Z, end.Z)
-        );
-
-        // add 1 to get correct volume (coords next to each other
-        // would produce 1x1 instead of 2x2 without this)
-        int sizeX = max.X - min.X + 1;
-        int sizeY = max.Y - min.Y + 1;
-        int sizeZ = max.Z - min.Z + 1;
-
-        (api as ICoreServerAPI)?.SendMessage(player, 0,
-            $"Selection size: {sizeX}x{sizeY}x{sizeZ}",
-            EnumChatType.Notification
-        );
-
-        if (
-                sizeX > MaxSelectionSize ||
-                sizeY > MaxSelectionSize ||
-                sizeZ > MaxSelectionSize
-            )
-        {
-            (api as ICoreServerAPI)?.SendMessage(player, 0,
-                "Selection too large! " +
-                $"Max {MaxSelectionSize}x{MaxSelectionSize}x{MaxSelectionSize}",
-                EnumChatType.Notification
-            );
-            player.Entity.WatchedAttributes.RemoveAttribute(SelectionDataKey);
-            return;
-        }
-
-        ConvertToEntity(player, min, max);
-
-        player.Entity.WatchedAttributes.RemoveAttribute(SelectionDataKey);
-    }
-
-    private void ConvertToEntity(IPlayer player, BlockPos min, BlockPos max)
-    {
-        List<StoredBlock> blocks = new List<StoredBlock>();
-        IBlockAccessor ba = api.World.BlockAccessor;
-
-        float width = max.X - min.X + 1;
-        float height = max.Y - min.Y + 1;
-        float length = max.Z - min.Z + 1;
-
-        for (int x = min.X; x <= max.X; x++)
-        {
-            for (int y = min.Y; y <= max.Y; y++)
-            {
-                for (int z = min.Z; z <= max.Z; z++)
-                {
-                    BlockPos pos = new BlockPos(x, y, z);
-                    Block block = ba.GetBlock(pos);
-                    if (block.Id == 0) continue;
-
-                    BlockEntity? be = ba.GetBlockEntity(pos);
-
-                    ITreeAttribute? beData = null;
-                    if (be != null)
-                    {
-                        beData = new TreeAttribute();
-                        be.ToTreeAttributes(beData);
-                    }
-
-                    float corrX = x - min.X - (width / 2);
-                    float corrZ = z - min.Z - (length / 2);
-
-                    // y is not translated towards center because
-                    // an entity's position's Y, is the block its standing on,
-                    // rather than 0.5 blocks up in the air
-                    //
-                    // NOTE: i dont know how this doesnt mess with the physics
-                    // body construction/rendering
-                    float corrY = y - min.Y;
-
-                    blocks.Add(new StoredBlock
-                    {
-                        Code = block.Code.ToShortString(),
-                        RelX = corrX,
-                        RelY = corrY,
-                        RelZ = corrZ,
-                        BlockEntityAttributes = beData
-                    });
-
-                    ba.SetBlock(0, pos);
-                    ba.RemoveBlockEntity(pos);
-                }
-            }
-        }
-
-        if (blocks.Count == 0)
-        {
-            (api as ICoreServerAPI)?.SendMessage(player, 0,
-                "No blocks in selection!", EnumChatType.Notification);
-            return;
-        }
-
-        SpawnMechanismEntity(min.ToVec3d(), max.ToVec3d(), blocks);
-
-        player.Entity.RightHandItemSlot?.Itemstack?.Collectible.DamageItem(
-            api.World, player.Entity, player.Entity.RightHandItemSlot, 1);
-
-        (api as ICoreServerAPI)?.SendMessage(player, 0,
-            $"Created construction with {blocks.Count} blocks",
-            EnumChatType.Notification
-        );
-    }
-
-    private void SpawnMechanismEntity(
-        Vec3d min, Vec3d max, List<StoredBlock> blocks
+    /// Turns the given blocks into one mechanism entity, whatever their shape.
+    /// Returns how many blocks were glued, air positions get skipped.
+    public static int GlueRegion(
+        IWorldAccessor world, IEnumerable<BlockPos> positions
     )
     {
-        EntityProperties? type = api.World.GetEntityType(
+        List<BlockPos> region = positions.ToList();
+        if (region.Count == 0) return 0;
+
+        EntityProperties? type = world.GetEntityType(
             new AssetLocation("industrialrevolution:mechanism")
         );
         if (type == null)
         {
-            api.Logger.Error("mechanism entity type not registered!");
-            return;
+            world.Logger.Error("mechanism entity type not registered!");
+            return 0;
         }
 
-        Entity entity = api.World.ClassRegistry.CreateEntity(type);
+        BlockPos min = new BlockPos(
+            region.Min(p => p.X), region.Min(p => p.Y), region.Min(p => p.Z)
+        );
+        BlockPos max = new BlockPos(
+            region.Max(p => p.X), region.Max(p => p.Y), region.Max(p => p.Z)
+        );
+
+        List<StoredBlock> blocks = new List<StoredBlock>();
+        IBlockAccessor ba = world.BlockAccessor;
+
+        float width = max.X - min.X + 1;
+        float length = max.Z - min.Z + 1;
+
+        foreach (BlockPos pos in region)
+        {
+            Block block = ba.GetBlock(pos);
+            if (block.Id == 0) continue;
+
+            BlockEntity? be = ba.GetBlockEntity(pos);
+
+            ITreeAttribute? beData = null;
+            if (be != null)  // if is blockEntity
+            {
+                beData = new TreeAttribute();
+                be.ToTreeAttributes(beData);  // preserve its data
+            }
+
+            float corrX = pos.X - min.X - (width / 2);
+            float corrZ = pos.Z - min.Z - (length / 2);
+
+            // y is not translated towards center because
+            // an entity's position's Y, is the block its standing on,
+            // rather than 0.5 blocks up in the air
+            //
+            // NOTE: i dont know how this doesnt mess with the physics
+            // body construction/rendering
+            float corrY = pos.Y - min.Y;
+
+            blocks.Add(new StoredBlock
+            {
+                Code = block.Code.ToShortString(),
+                RelX = corrX,
+                RelY = corrY,
+                RelZ = corrZ,
+                BlockEntityAttributes = beData
+            });
+
+            ba.SetBlock(0, pos);
+            ba.RemoveBlockEntity(pos);  // TODO: this might be redundant
+        }
+
+        if (blocks.Count == 0) return 0;
+
+        SpawnMechanismEntity(world, type, min.ToVec3d(), max.ToVec3d(), blocks);
+
+        return blocks.Count;
+    }
+
+    private static void SpawnMechanismEntity(
+        IWorldAccessor world,
+        EntityProperties type,
+        Vec3d min, Vec3d max, List<StoredBlock> blocks
+    )
+    {
+        Entity entity = world.ClassRegistry.CreateEntity(type);
 
         var width = max.X - min.X + 1;
         var height = max.Y - min.Y + 1;
@@ -167,6 +100,7 @@ public partial class ItemConstructionGlue : Item
 
         var centerPos = min.Add(width / 2, 0, length / 2);
 
+        // TODO: fix warning
         entity.ServerPos.SetPos(centerPos);
         entity.Pos.SetFrom(entity.ServerPos);
 
@@ -193,7 +127,7 @@ public partial class ItemConstructionGlue : Item
         entity.WatchedAttributes["blockData"] = blockData;
         entity.WatchedAttributes.MarkPathDirty("blockData");
 
-        api.World.SpawnEntity(entity);
+        world.SpawnEntity(entity);
     }
 
     public override WorldInteraction[] GetHeldInteractionHelp(ItemSlot inSlot)
