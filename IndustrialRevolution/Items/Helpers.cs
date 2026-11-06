@@ -202,8 +202,25 @@ public partial class ItemConstructionGlue : Item
         {
             new WorldInteraction
             {
-                ActionLangCode = "Click to start, click again to end selection",
+                ActionLangCode = "Click two corners to add a box",
                 MouseButton = EnumMouseButton.Right
+            },
+            new WorldInteraction
+            {
+                ActionLangCode = "Click two corners to remove a box",
+                MouseButton = EnumMouseButton.Left
+            },
+            new WorldInteraction
+            {
+                ActionLangCode = "Glue the selection",
+                HotKeyCode = "shift",
+                MouseButton = EnumMouseButton.Right
+            },
+            new WorldInteraction
+            {
+                ActionLangCode = "Clear the selection",
+                HotKeyCode = "shift",
+                MouseButton = EnumMouseButton.Left
             }
         };
     }
