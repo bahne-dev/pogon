@@ -12,6 +12,18 @@ public partial class ItemConstructionGlue : Item
     private const string SelectionDataKey = "mechanism_selection";
     private ModLogger? log = IndustrialRevolutionModSystem.Logger;
 
+    // NOTE: server side only, keyed by player uid
+    // In memory on purpose, an unfinished selection isn't worth saving
+    private readonly Dictionary<string, GlueSelection> selections = new();
+
+    public override void OnLoaded(ICoreAPI api)
+    {
+        base.OnLoaded(api);
+
+        // without this crouch+right click on a chest etc would use the block
+        this.HeldPriorityInteract = true;
+    }
+
     public override void OnHeldInteractStart(
         ItemSlot slot,
         EntityAgent byEntity,
