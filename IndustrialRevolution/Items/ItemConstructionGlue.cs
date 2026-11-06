@@ -1,6 +1,9 @@
+using System.Collections.Generic;
+using System.Linq;
+
 using Vintagestory.API.Common;
+using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
-using Vintagestory.API.Datastructures;
 
 using IndustrialRevolution.util;
 
@@ -8,8 +11,8 @@ namespace IndustrialRevolution;
 
 public partial class ItemConstructionGlue : Item
 {
-    private const int MaxSelectionSize = 16;
-    private const string SelectionDataKey = "mechanism_selection";
+    private const int HighlightSlotId = 7410;  // random number
+
     private ModLogger? log = IndustrialRevolutionModSystem.Logger;
 
     // NOTE: server side only, keyed by player uid
@@ -33,17 +36,19 @@ public partial class ItemConstructionGlue : Item
         ref EnumHandHandling handling
     )
     {
-        if (blockSel == null)
+        // crouching confirms, so it works when aiming at nothing
+        bool confirm = byEntity.Controls.ShiftKey;
+
+        if (blockSel == null && !confirm)
         {
             handling = EnumHandHandling.NotHandled;
             return;
         }
 
-        if (api.Side != EnumAppSide.Server)
-        {
-            handling = EnumHandHandling.PreventDefault;
-            return;
-        } // only handle on server
+        handling = EnumHandHandling.PreventDefault;
+
+        // only handle on server, and once per click
+        if (api.Side != EnumAppSide.Server || !firstEvent) return;
 
         IPlayer? player = (byEntity as EntityPlayer)?.Player;
         if (player == null)
@@ -52,38 +57,53 @@ public partial class ItemConstructionGlue : Item
             return;
         }
 
-        ITreeAttribute? selectionData = player
-            .Entity
-            .WatchedAttributes
-            .GetTreeAttribute(SelectionDataKey);
-
-        if (selectionData != null && selectionData.GetBool("active"))
-        { // second click
-            selectionData.SetInt("endX", blockSel.Position.X);
-            selectionData.SetInt("endY", blockSel.Position.Y);
-            selectionData.SetInt("endZ", blockSel.Position.Z);
-
-            ProcessSelection(player);
+        if (confirm)
+        {
+            this.Confirm(player, slot);
         }
         else
-        { // first click
-            selectionData = new TreeAttribute();
-            selectionData.SetInt("startX", blockSel.Position.X);
-            selectionData.SetInt("startY", blockSel.Position.Y);
-            selectionData.SetInt("startZ", blockSel.Position.Z);
-            selectionData.SetBool("active", true);
+        {
+            this.Edit(player, blockSel!.Position, GlueEdit.Add);
+        }
+    }
 
-            player.Entity.WatchedAttributes[SelectionDataKey] = selectionData;
-            player.Entity.WatchedAttributes.MarkPathDirty(SelectionDataKey);
+    public override void OnHeldAttackStart(
+        ItemSlot slot,
+        EntityAgent byEntity,
+        BlockSelection blockSel,
+        EntitySelection entitySel,
+        ref EnumHandHandling handling
+    )
+    {
+        bool doClear = byEntity.Controls.ShiftKey;
 
-            (api as ICoreServerAPI)?
-                .SendMessage(player, 0,
-                $"Selection started at {blockSel.Position}",
-                EnumChatType.Notification
+        if (blockSel == null && !doClear)
+        {
+            base.OnHeldAttackStart(
+                slot, byEntity, blockSel, entitySel, ref handling
             );
+            return;
         }
 
+        // also stops the click from breaking the block
         handling = EnumHandHandling.PreventDefault;
+
+        if (api.Side != EnumAppSide.Server) return;
+
+        IPlayer? player = (byEntity as EntityPlayer)?.Player;
+        if (player == null) return;
+
+        // if shift held when left click, wipe whole selection
+        if (doClear)
+        {
+            this.Selection(player).Clear();
+            this.ShowSelection(player);
+            this.Notify(player, "Selection cleared");
+        }
+        else
+        {
+            this.Edit(player, blockSel!.Position, GlueEdit.Remove);
+        }
     }
 
     public override bool OnHeldInteractStep(float secondsUsed, ItemSlot slot, EntityAgent byEntity,
