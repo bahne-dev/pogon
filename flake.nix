@@ -57,13 +57,19 @@
               python3Packages.tkinter
             ];
 
-            LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath [
-              pkgs.stdenv.cc.cc.lib
-              pkgs.zlib
-            ]}";
+            # the game libs normally come from the vintagestory wrapper, which
+            # Rider skips so it can debug (and hot reload) the dotnet process
+            LD_LIBRARY_PATH = "${pkgs.lib.makeLibraryPath (
+              [
+                pkgs.stdenv.cc.cc.lib
+                pkgs.zlib
+              ]
+              ++ pkgs.vintagestory.passthru.runtimeLibs
+            )}";
 
             VINTAGE_STORY = "${pkgs.vintagestory}/share/vintagestory";
             VINTAGE_STORY_BIN = "${pkgs.vintagestory}/bin/vintagestory";
+            VINTAGE_STORY_DOTNET = "${pkgs.dotnet-sdk_10}/share/dotnet/dotnet";
 
 
             shellHook = ''
