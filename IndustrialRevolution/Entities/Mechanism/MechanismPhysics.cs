@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using System.Collections.Generic;
+using System.Linq;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Common.Entities;
@@ -29,6 +30,14 @@ public partial class EntityMechanism
 
     // kept to compute the current bounding box every tick
     private Compound? bodyShape;
+
+    // farthest any part of the body reaches from its center of mass, so a
+    // search this far around it covers the body however it's rotated
+    private float bodyReach;
+
+    // world blocks already added as statics, so overlapping searches don't
+    // stack duplicate boxes in the same spot
+    private readonly HashSet<(int x, int y, int z)> addedStatics = new();
 
     public Vector3 centerOfMass
     {
@@ -105,6 +114,12 @@ public partial class EntityMechanism
         this.centerOfMass = centerOfMass;
         log?.Debug($"com: {this.centerOfMass}");
 
+        // block center farthest from the com, plus half a block's diagonal
+        this.bodyReach = this.blockDataList.Max(b => Vector3.Distance(
+            new Vector3(b.RelX + 0.5f, b.RelY + 0.5f, b.RelZ + 0.5f),
+            centerOfMass
+        )) + MathF.Sqrt(3) / 2;
+
         inertia = bodyInertia;
 
         builder.Dispose();
@@ -150,31 +165,28 @@ public partial class EntityMechanism
     // this only updates based on the entity not the physics body
     private void DetectAndAddNearbyBlocks()
     {
-        if (this.physicsSimulation == null) return;
+        if (this.physicsSimulation?.Simulation == null) return;
+        if (this.Api?.World?.BlockAccessor == null) return;
 
+        // if no body was made don't search
+        if (this.bodyShape == null) return;
+
+        var simulation = this.physicsSimulation.Simulation;
+        var body = simulation.Bodies.GetBodyReference(this.physicsBodyHandle);
+
+        // searches are keyed on the block the body's center is in, a new one
+        // only runs once it moves into a block it hasn't been in yet
+        // (prevents resting bodies from just spamming the search)
         (int x, int y, int z) pos = (
-            this.Pos.AsBlockPos.X,
-            this.Pos.AsBlockPos.Y,
-            this.Pos.AsBlockPos.Z
+            (int)MathF.Floor(body.Pose.Position.X),
+            (int)MathF.Floor(body.Pose.Position.Y),
+            (int)MathF.Floor(body.Pose.Position.Z)
         );
 
         if (visitedCoords.Contains(pos)) return;
 
-        if (this.physicsSimulation?.Simulation == null) return;
-        if (this.Api?.World?.BlockAccessor == null) return;
-        if (this.Pos?.AsBlockPos == null) return;
-
-        var simulation = this.physicsSimulation.Simulation;
-
-        var body = this
-            .physicsSimulation
-            .Simulation.Bodies.GetBodyReference(this.physicsBodyHandle);
-
-        var shape = this.physicsSimulation.Simulation.Shapes.GetShape<Box>(body.Collidable.Shape.Index);
-
-        int range = (int)Math.Ceiling(
-            Math.Max(shape.Width, Math.Max(shape.Height, shape.Length))
-        ) + 1;
+        // reach covers every rotation, +1 for blocks it could move into next
+        int range = (int)MathF.Ceiling(this.bodyReach) + 1;
 
         BlockPos minPos = new BlockPos(
             pos.x - range,
@@ -201,6 +213,8 @@ public partial class EntityMechanism
                     Block? block = this.Api.World.BlockAccessor.GetBlock(blkPos);
 
                     if (block == null || block.Id == 0) continue;
+                    if (this.IsBuried(x, y, z)) continue;
+                    if (!this.addedStatics.Add((x, y, z))) continue;
 
                     var staticBox = new Box(1f, 1f, 1f);
                     var staticBoxIndex = simulation.Shapes.Add(staticBox);
@@ -218,6 +232,21 @@ public partial class EntityMechanism
         }
 
         this.visitedCoords.Add(pos);
+    }
+
+    // a block with no open face can't be touched, so it needs no static.
+    // keeps big searches from adding every block of the ground underneath
+    private bool IsBuried(int x, int y, int z)
+    {
+        var ba = this.Api!.World.BlockAccessor;
+
+        return
+            ba.GetBlock(new BlockPos(x + 1, y, z)).Id != 0 &&
+            ba.GetBlock(new BlockPos(x - 1, y, z)).Id != 0 &&
+            ba.GetBlock(new BlockPos(x, y + 1, z)).Id != 0 &&
+            ba.GetBlock(new BlockPos(x, y - 1, z)).Id != 0 &&
+            ba.GetBlock(new BlockPos(x, y, z + 1)).Id != 0 &&
+            ba.GetBlock(new BlockPos(x, y, z - 1)).Id != 0;
     }
 
     private int updateCounter = 0;
@@ -288,6 +317,7 @@ public partial class EntityMechanism
 
         this.bodyShape = null;
         this.visitedCoords.Clear();
+        this.addedStatics.Clear();
 
         physicsInitialized = false;
     }
