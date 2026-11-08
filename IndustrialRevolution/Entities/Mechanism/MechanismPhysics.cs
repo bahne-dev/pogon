@@ -23,6 +23,7 @@ public partial class EntityMechanism
     private HashSet<(int x, int y, int z)> visitedCoords =
         new HashSet<(int x, int y, int z)>();
 
+    // FIXME: why do i have this
     private PhysicsSimulation? clientSim;
 
     public Vector3 centerOfMass
