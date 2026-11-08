@@ -3,6 +3,7 @@ using System.Numerics;
 using System.Collections.Generic;
 using Vintagestory.API.Common;
 using Vintagestory.API.MathTools;
+using Vintagestory.API.Common.Entities;
 
 using BepuPhysics;
 using BepuPhysics.Collidables;
@@ -254,6 +255,12 @@ public partial class EntityMechanism
         this.StoreBodyPose(pose.Position, pose.Orientation);
     }
 
+    public override void OnEntityDespawn(EntityDespawnData despawn)
+    {
+        this.CleanupPhysics();
+        base.OnEntityDespawn(despawn);
+    }
+
     private void CleanupPhysics()
     {
         if (!physicsInitialized || physicsSimulation == null) return;
@@ -262,14 +269,25 @@ public partial class EntityMechanism
 
         foreach (var handle in nearbyStaticHandles)
         {
+            // every static got its own box shape, free it along with it
+            var staticShape = simulation.Statics[handle].Shape;
             simulation.Statics.Remove(handle);
+            simulation.Shapes.Remove(staticShape);
         }
         nearbyStaticHandles.Clear();
 
         if (simulation.Bodies.BodyExists(physicsBodyHandle))
         {
+            // the compound and the child boxes the builder added for it
+            var shape = simulation.Bodies[physicsBodyHandle].Collidable.Shape;
             simulation.Bodies.Remove(physicsBodyHandle);
+            simulation.Shapes.RecursivelyRemoveAndDispose(
+                shape, simulation.BufferPool
+            );
         }
+
+        this.bodyShape = null;
+        this.visitedCoords.Clear();
 
         physicsInitialized = false;
     }
