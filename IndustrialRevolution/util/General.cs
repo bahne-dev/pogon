@@ -44,52 +44,6 @@ public class General
         }
     }
 
-    public static (float pitch, float yaw, float roll) QuaternionToEuler(System.Numerics.Quaternion q)
-    {
-        // X->Y->Z rotation order to match renderer
-        float sinPitch = 2.0f * (q.W * q.X - q.Y * q.Z);
-        float pitch;
-        if (MathF.Abs(sinPitch) >= 1)
-            pitch = MathF.CopySign(MathF.PI / 2, sinPitch);
-        else
-            pitch = MathF.Asin(sinPitch);
-
-        float yaw = MathF.Atan2(
-            2.0f * (q.W * q.Y + q.X * q.Z),
-            1.0f - 2.0f * (q.X * q.X + q.Y * q.Y)
-        );
-
-        float roll = MathF.Atan2(
-            2.0f * (q.W * q.Z + q.X * q.Y),
-            1.0f - 2.0f * (q.X * q.X + q.Z * q.Z)
-        );
-
-        return (pitch, yaw, roll);
-    }
-
-    public static System.Numerics.Quaternion EulerToQuaternion(float pitch, float yaw, float roll)
-    {
-        // X->Y->Z rotation order to match renderer
-        float halfPitch = pitch * 0.5f;
-        float halfYaw = yaw * 0.5f;
-        float halfRoll = roll * 0.5f;
-
-        float cosHalfPitch = MathF.Cos(halfPitch);
-        float sinHalfPitch = MathF.Sin(halfPitch);
-        float cosHalfYaw = MathF.Cos(halfYaw);
-        float sinHalfYaw = MathF.Sin(halfYaw);
-        float cosHalfRoll = MathF.Cos(halfRoll);
-        float sinHalfRoll = MathF.Sin(halfRoll);
-
-        // Quaternion multiplication for X->Y->Z rotation order
-        float x = sinHalfPitch * cosHalfYaw * cosHalfRoll + cosHalfPitch * sinHalfYaw * sinHalfRoll;
-        float y = cosHalfPitch * sinHalfYaw * cosHalfRoll - sinHalfPitch * cosHalfYaw * sinHalfRoll;
-        float z = cosHalfPitch * cosHalfYaw * sinHalfRoll - sinHalfPitch * sinHalfYaw * cosHalfRoll;
-        float w = cosHalfPitch * cosHalfYaw * cosHalfRoll + sinHalfPitch * sinHalfYaw * sinHalfRoll;
-
-        return new System.Numerics.Quaternion(x, y, z, w);
-    }
-
     public static float[] QuaternionToMatrix(System.Numerics.Quaternion q)
     {
         var m = System.Numerics.Matrix4x4.CreateFromQuaternion(q);
