@@ -98,12 +98,11 @@ public class PhysicsDebugRenderer : IRenderer
     {
         if (body.IsCompound)
         {
-            // TODO: have this parent quat apply to the children correctly
             var parentQuat = new System.Numerics.Quaternion(
                 body.RotX, body.RotY, body.RotZ, body.RotW
             );
 
-            var (pitch, yaw, roll) = util.General.QuaternionToEuler(parentQuat);
+            var rotation = util.General.QuaternionToMatrix(parentQuat);
 
             foreach (var child in body.Children)
             {
@@ -124,10 +123,8 @@ public class PhysicsDebugRenderer : IRenderer
                 // All children use the SAME rotation as parent
                 prog.ModelMatrix = new Matrixf()
                     .Translate(x, y, z)
-                    .RotateX(pitch)
-                    .RotateY(yaw)
-                    .RotateZ(roll)
-                    .Scale(1f, 1f, 1f)
+                    .Mul(rotation)
+                    .Translate(-0.5f, -0.5f, -0.5f) // mesh is 0..1, bepu is centered
                     .Values;
 
                 rapi.RenderMesh(meshRef);
@@ -142,14 +139,11 @@ public class PhysicsDebugRenderer : IRenderer
             var q = new System.Numerics.Quaternion(
                 body.RotX, body.RotY, body.RotZ, body.RotW
             );
-            var (pitch, yaw, roll) = util.General.QuaternionToEuler(q);
-
             prog.ModelMatrix = new Matrixf()
                 .Translate(x, y, z)
-                .RotateX(pitch)
-                .RotateY(yaw)
-                .RotateZ(roll)
+                .Mul(util.General.QuaternionToMatrix(q))
                 .Scale(body.Width, body.Height, body.Length)
+                .Translate(-0.5f, -0.5f, -0.5f) // mesh is 0..1, bepu is centered
                 .Values;
 
             rapi.RenderMesh(meshRef);

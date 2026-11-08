@@ -62,38 +62,51 @@ public class MechanismRenderer : EntityRenderer
         prog.Use();
         prog.Tex2D = capi.BlockTextureAtlas.AtlasTextures[0].TextureId;
 
+        Vector3 com = this.entity.centerOfMass;
+
+        if (!entity.TryGetBodyPose(
+            // if pose stored, use those xyz
+            out double bodyX, out double bodyY, out double bodyZ, out var rot
+        ))
+        {
+            // if no stored pose, use entity.Pos (feet) offset by com (center)
+            // no stored pose means just glued, so no rotation (still upright)
+            (bodyX, bodyY, bodyZ) = (
+                entity.Pos.X + com.X, entity.Pos.Y + com.Y, entity.Pos.Z + com.Z
+            );
+        }
+
+        float[] rotation = util.General.QuaternionToMatrix(rot);
+
         for (int i = 0; i < this.blockMeshes.Length; i++)
         {
             if (blockMeshes[i] == null || blockOffsets == null) continue;
 
-            if (joecount < 10) {
+            if (joecount < 10)
+            {
                 IndustrialRevolutionModSystem.Logger.Debug(
                     $"pos @ rend: ({entity.Pos.X} {entity.Pos.Y} {entity.Pos.Z})"
                 );
                 joecount++;
             }
 
-            float entityX = (float)(entity.Pos.X - camPos.X);
-            float entityY = (float)(entity.Pos.Y - camPos.Y);
-            float entityZ = (float)(entity.Pos.Z - camPos.Z);
+            float entityX = (float)(bodyX - camPos.X);
+            float entityY = (float)(bodyY - camPos.Y);
+            float entityZ = (float)(bodyZ - camPos.Z);
 
-            float comX = this.entity.centerOfMass.X;
-            float comY = this.entity.centerOfMass.Y;
-            float comZ = this.entity.centerOfMass.Z;
-
-            if (this.entity.centerOfMass.X == 0) {
+            if (this.entity.centerOfMass.X == 0)
+            {
                 IndustrialRevolutionModSystem.Logger.Debug("broo...");
             }
 
             prog.ModelMatrix = new Matrixf()
                 .Translate(entityX, entityY, entityZ)
-                .RotateX(entity.RotationX)
-                .RotateY(entity.RotationY)
-                .RotateZ(entity.RotationZ)
+                .Mul(rotation)
+                // offsets are from the upright feet, the body is centered on com
                 .Translate(
-                    blockOffsets[i].X - comX,
-                    blockOffsets[i].Y - comY,
-                    blockOffsets[i].Z - comZ
+                    blockOffsets[i].X - com.X,
+                    blockOffsets[i].Y - com.Y,
+                    blockOffsets[i].Z - com.Z
                 )
                 .Values;
 

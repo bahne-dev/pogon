@@ -26,6 +26,9 @@ public partial class EntityMechanism
     // FIXME: why do i have this
     private PhysicsSimulation? clientSim;
 
+    // kept to compute the current bounding box every tick
+    private Compound? bodyShape;
+
     public Vector3 centerOfMass
     {
         get => new Vector3(
@@ -74,11 +77,13 @@ public partial class EntityMechanism
         foreach (var blk in blockDataList)
         {
             var box = new Box(1f, 1f, 1f);
+
+            // NOTE: Rel* is the block's corner, bepu boxes are centered
             var childPose = new RigidPose(
                 new System.Numerics.Vector3(
-                    blk.RelX,
-                    blk.RelY,
-                    blk.RelZ
+                    blk.RelX + 0.5f,
+                    blk.RelY + 0.5f,
+                    blk.RelZ + 0.5f
                 ),
                 System.Numerics.Quaternion.Identity
             );
@@ -106,16 +111,26 @@ public partial class EntityMechanism
         var compoundShape = new Compound(children);
 
         shapeIndex = simulation.Shapes.Add(compoundShape);
+        this.bodyShape = compoundShape;
 
-        // centerOfMass here is an offset i think
-        float x, y, z = 0;
-        x = (float)this.Pos.X + centerOfMass.X;
-        y = (float)this.Pos.Y + centerOfMass.Y;
-        z = (float)this.Pos.Z + centerOfMass.Z;
+        RigidPose pose;
 
-        var pose = new RigidPose(
-            new System.Numerics.Vector3(x, y, z)
-        );
+        if (this.TryGetBodyPose(out var px, out var py, out var pz, out var rot))
+        {
+            // if body has stored data already just restore it
+            pose = new RigidPose(new Vector3((float)px, (float)py, (float)pz), rot);
+        }
+        else
+        {
+            // if no stored data its freshly glued:
+            // Pos is the bottom center of the upright mechanism and
+            // centerOfMass the offset from there to the body's center
+            pose = new RigidPose(new Vector3(
+                (float)this.Pos.X + centerOfMass.X,
+                (float)this.Pos.Y + centerOfMass.Y,
+                (float)this.Pos.Z + centerOfMass.Z
+            ));
+        }
 
         var bodyDescription = BodyDescription.CreateDynamic(
             pose,
@@ -188,7 +203,10 @@ public partial class EntityMechanism
 
                     var staticBox = new Box(1f, 1f, 1f);
                     var staticBoxIndex = simulation.Shapes.Add(staticBox);
-                    var staticPose = new RigidPose(new System.Numerics.Vector3(x, y, z));
+                    // bepu boxes are centered, block positions are corners
+                    var staticPose = new RigidPose(
+                        new System.Numerics.Vector3(x + 0.5f, y + 0.5f, z + 0.5f)
+                    );
                     var staticDescription = new StaticDescription(staticPose, staticBoxIndex);
 
                     var staticHandle = simulation.Statics.Add(staticDescription);
@@ -215,26 +233,25 @@ public partial class EntityMechanism
         var velocity = bodyRef.Velocity;
         var angularVel = bodyRef.Velocity.Angular;
 
-        // update entity position and orientation from physics
-        this.ServerPos.X = pose.Position.X;
-        this.ServerPos.Y = pose.Position.Y;
-        this.ServerPos.Z = pose.Position.Z;
+        // we treat Pos as the bottom center of the current bounding box, the
+        // same "feet" any other entity has, so the hitbox and anything else
+        // the game puts at Pos lines up however the mechanism is rotated.
+
+        // we compute the min and max of the bounding box using the following
+        // method which takes all the shapes of the simulation and looks up the
+        // ones it needs using the indices stored in bodyShape
+        this.bodyShape!.Value.ComputeBounds(
+            pose.Orientation, simulation.Shapes, out var min, out var max
+        );
+
+        this.ServerPos.X = pose.Position.X + (min.X + max.X) / 2;
+        this.ServerPos.Y = pose.Position.Y + min.Y;
+        this.ServerPos.Z = pose.Position.Z + (min.Z + max.Z) / 2;
 
         this.Pos.SetPos(this.ServerPos);
 
-        // convert quaternion to euler angles
-        var (pitch, yaw, roll) = util.General.QuaternionToEuler(
-            pose.Orientation
-        );
-
-        this.RotationX = pitch;
-        this.RotationY = yaw;
-        this.RotationZ = roll;
-
-        // Mark dirty to sync to clients
-        WatchedAttributes.MarkPathDirty("rotX");
-        WatchedAttributes.MarkPathDirty("rotY");
-        WatchedAttributes.MarkPathDirty("rotZ");
+        // the renderer draws from this, and a reload restores the body from it
+        this.StoreBodyPose(pose.Position, pose.Orientation);
     }
 
     private void CleanupPhysics()
