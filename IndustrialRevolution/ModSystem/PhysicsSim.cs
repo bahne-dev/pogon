@@ -6,6 +6,7 @@ using IndustrialRevolution.Entities.Mechanism.Physics;
 
 using BepuPhysics;
 using BepuPhysics.Collidables;
+using BepuUtilities;
 
 namespace IndustrialRevolution;
 
@@ -56,16 +57,19 @@ public partial class IndustrialRevolutionModSystem : ModSystem
     {
         TypedIndex shapeIndex;
         RigidPose pose;
+        BoundingBox aabb;
 
         switch (bodyObjRef) {
             case BodyReference bodyRef:
                 shapeIndex = bodyRef.Collidable.Shape;
                 pose = bodyRef.Pose;
+                aabb = bodyRef.BoundingBox;
                 break;
             default:
                 StaticReference staticRef = (StaticReference)bodyObjRef;
                 shapeIndex = staticRef.Shape;
                 pose = staticRef.Pose;
+                aabb = staticRef.BoundingBox;
                 break;
         }
 
@@ -82,6 +86,13 @@ public partial class IndustrialRevolutionModSystem : ModSystem
             RotY = pose.Orientation.Y,
             RotZ = pose.Orientation.Z,
             RotW = pose.Orientation.W,
+
+            AabbMinX = aabb.Min.X,
+            AabbMinY = aabb.Min.Y,
+            AabbMinZ = aabb.Min.Z,
+            AabbMaxX = aabb.Max.X,
+            AabbMaxY = aabb.Max.Y,
+            AabbMaxZ = aabb.Max.Z,
         };
 
         if (shapeTypeId == Box.Id)

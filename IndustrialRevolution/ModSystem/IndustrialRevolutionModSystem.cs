@@ -37,6 +37,12 @@ public partial class IndustrialRevolutionModSystem : ModSystem
             new PhysicsDebugRenderer(this, capi), EnumRenderStage.Opaque
         );
         this.RegisterVizCommand(capi);
+
+        // after the game's own selection box debug, which uses this stage
+        this.capi.Event.RegisterRenderer(
+            new DebugWireframeRenderer(this, capi),
+            EnumRenderStage.AfterFinalComposition
+        );
     }
 
     public override void StartServerSide(ICoreServerAPI sapi)

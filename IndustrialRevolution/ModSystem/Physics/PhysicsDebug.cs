@@ -30,6 +30,14 @@ public class BodyDebugInfo
 
     [ProtoMember(11)] public bool IsCompound { get; set; }
     [ProtoMember(12)] public List<CompoundChildDebug> Children { get; set; } = new();
+
+    // world space bounds from the broad phase
+    [ProtoMember(13)] public float AabbMinX { get; set; }
+    [ProtoMember(14)] public float AabbMinY { get; set; }
+    [ProtoMember(15)] public float AabbMinZ { get; set; }
+    [ProtoMember(16)] public float AabbMaxX { get; set; }
+    [ProtoMember(17)] public float AabbMaxY { get; set; }
+    [ProtoMember(18)] public float AabbMaxZ { get; set; }
 }
 
 [ProtoContract]
