@@ -2,12 +2,12 @@
     "$schema": "https://moddbcdn.vintagestory.at/schema/modinfo.latest.json",
     "type": "Code",
     "modid": "industrialrevolution",
-    "name": "IndustrialRevolution",
+    "name": "Pogon",
     "authors": [
-        "Yus"
+        "bahne"
     ],
-    "description": "a mod about the industrial revolution i think",
-    "version": "1.0.0",
+    "description": "Steam engines built from chiseled blocks, with simulated steam and rigid-body physics. Work in progress.",
+    "version": "0.1.0",
     "dependencies": {
         "game": "1.22.0"
     }
